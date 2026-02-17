@@ -2,6 +2,8 @@
 
 A personal AI-powered knowledge management system built for the Altibbe / Hedamo internship assessment. Capture ideas, notes, and insights — then query them with natural language through an AI assistant.
 
+🔗 **Live Demo:** [secondbraindev.vercel.app](https://secondbraindev.vercel.app)
+
 ---
 
 ## What it does
