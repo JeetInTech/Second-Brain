@@ -1,0 +1,45 @@
+// ──────────────────────────────────────────────────────────────
+// Second Brain — Database Schema
+// Using PostgreSQL for production-grade storage with full-text
+// search capabilities and native array support for tags.
+// ──────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Every piece of knowledge a user captures lives here.
+// Keeping it flat intentionally — no premature normalization.
+// Tags are stored as a native PG array for fast filtering.
+model KnowledgeItem {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  type      ItemType @default(NOTE)
+  tags      String[] @default([])
+  sourceUrl String?  @map("source_url")
+  summary   String?  @db.Text // AI-generated, populated async
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("knowledge_items")
+}
+
+// Three flavors of knowledge — clean and simple.
+// NOTE: freeform thoughts, ideas, reflections
+// LINK: bookmarked articles, videos, references
+// INSIGHT: synthesized understanding, "aha" moments
+enum ItemType {
+  NOTE
+  LINK
+  INSIGHT
+}

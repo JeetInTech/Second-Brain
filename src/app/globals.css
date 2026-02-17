@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/*
+ * ─── Design Tokens ───────────────────────────────────────
+ * Warm editorial palette — think paper & ink, not neon tech.
+ * Intentionally steering away from the typical SaaS blue.
+ */
+
+:root {
+  --background: #faf9f6;
+  --foreground: #1a1a2e;
+
+  --card: #ffffff;
+  --card-hover: #f7f6f3;
+  --border: #e8e6e1;
+  --border-hover: #d4d1ca;
+
+  --muted: #f3f2ee;
+  --muted-foreground: #6b6b80;
+
+  --accent: #e07a5f;
+  --accent-hover: #d4644a;
+  --accent-light: #fdf0ec;
+
+  --steel: #3d5a80;
+  --steel-light: #eef2f7;
+
+  --sage: #81b29a;
+  --sage-light: #edf5f0;
+
+  --sidebar-bg: #1a1a2e;
+  --sidebar-text: #c4c4d4;
+  --sidebar-active: #ffffff;
+  --sidebar-accent: #e07a5f;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-light: var(--accent-light);
+  --color-steel: var(--steel);
+  --color-steel-light: var(--steel-light);
+  --color-sage: var(--sage);
+  --color-sage-light: var(--sage-light);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/*
+ * ─── Base Styles ─────────────────────────────────────────
+ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/*
+ * ─── Selection ───────────────────────────────────────────
+ * Small detail but it makes the whole app feel considered.
+ */
+
+::selection {
+  background-color: var(--accent);
+  color: white;
+}
+
+/*
+ * ─── Focus Styles ────────────────────────────────────────
+ * Visible keyboard focus rings that match our accent color.
+ * a11y matters.
+ */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * ─── Animations ──────────────────────────────────────────
+ * Keyframes for page transitions and micro-interactions.
+ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+/*
+ * ─── Skeleton Loader ─────────────────────────────────────
+ * Shimmer effect for loading states.
+ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 25%,
+    var(--card-hover) 50%,
+    var(--muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/*
+ * ─── Prose Content ───────────────────────────────────────
+ * For rendered note content in detail views.
+ */
+
+.prose-content p {
+  margin-bottom: 1em;
+  line-height: 1.7;
+}
+
+.prose-content p:last-child {
+  margin-bottom: 0;
+}
