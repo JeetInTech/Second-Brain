@@ -23,7 +23,7 @@ Second Brain is a full-stack application that lets you:
 | Styling | Tailwind CSS v4 |
 | Animations | Framer Motion |
 | Database | PostgreSQL via Prisma ORM |
-| AI | Google Gemini 2.0 Flash (via Vercel AI SDK) |
+| AI | Google Gemini 2.5 Flash (via Vercel AI SDK) |
 | Icons | Lucide React |
 
 ## Getting started

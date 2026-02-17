@@ -38,9 +38,9 @@ export async function summarizeContent(
 
   try {
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       temperature: 0.3,
-      maxOutputTokens: 200,
+      maxOutputTokens: 2048,
       system:
         "You are a sharp, concise writer. Summarize the following content in 2-3 sentences. " +
         "Focus on the key insight or takeaway. No filler, no fluff. Write like a human, not a bot.",
@@ -72,26 +72,56 @@ export async function generateTags(
   if (!isAIConfigured()) return [];
 
   try {
+    // Truncate content to 1500 chars for tag generation — tags only need the gist
+    const truncatedContent = content.length > 1500 
+      ? content.slice(0, 1500) + "..." 
+      : content;
+
+    const inputText = title
+      ? `Title: ${title}\n\nContent: ${truncatedContent}`
+      : truncatedContent;
+
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       temperature: 0.2,
-      maxOutputTokens: 100,
-      system:
-        "You are a knowledge organizer. Given the following content, return 3-6 relevant tags " +
-        "as a JSON array of lowercase strings. Tags should be specific and useful for filtering. " +
-        'Avoid generic tags like "information" or "content". Use hyphens for multi-word tags. ' +
-        "Return ONLY the JSON array, nothing else.",
-      prompt: title
-        ? `Title: ${title}\n\nContent: ${content}`
-        : content,
+      maxOutputTokens: 2048,
+      prompt:
+        "You are a knowledge organizer. Analyze the following text and generate 3-6 relevant tags.\n" +
+        "Rules:\n" +
+        "- Tags must be lowercase\n" +
+        "- Use hyphens for multi-word tags (e.g. machine-learning)\n" +
+        '- Avoid generic tags like "information" or "content"\n' +
+        "- Return ONLY a JSON array of strings, nothing else\n" +
+        '- Example output: ["javascript", "web-dev", "react-hooks"]\n\n' +
+        "Text to analyze:\n" +
+        inputText,
     });
 
-    const raw = text?.trim() ?? "[]";
-    const parsed = JSON.parse(raw);
+    console.log("[AI] Tag generation raw response:", JSON.stringify(text));
 
-    // Validate that we actually got an array of strings back
+    const raw = (text ?? "").trim();
+    if (!raw) {
+      console.warn("[AI] Empty response from tag generation");
+      return [];
+    }
+
+    // Extract JSON array from response - handle markdown code blocks, extra text, etc.
+    const jsonMatch = raw.match(/\[[\s\S]*?\]/);
+    if (!jsonMatch) {
+      console.warn("[AI] No JSON array found in response:", raw);
+      // Fallback: try to parse comma-separated tags
+      const fallbackTags = raw
+        .replace(/["\[\]`]/g, '')
+        .split(/[,\n]+/)
+        .map(t => t.trim().toLowerCase())
+        .filter(t => t.length > 0 && t.length < 30);
+      return fallbackTags.slice(0, 6);
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
     if (Array.isArray(parsed) && parsed.every((t: unknown) => typeof t === "string")) {
-      return parsed.map((t: string) => t.toLowerCase().trim());
+      return parsed.map((t: string) => t.toLowerCase().trim()).filter(t => t.length > 0);
     }
 
     return [];
@@ -124,9 +154,9 @@ export async function queryKnowledgeBase(
 
   try {
     const { text } = await generateText({
-      model: google("gemini-2.0-flash"),
+      model: google("gemini-2.5-flash"),
       temperature: 0.4,
-      maxOutputTokens: 500,
+      maxOutputTokens: 4096,
       system:
         "You are a helpful personal knowledge assistant. Answer the user's question based ONLY " +
         "on the provided knowledge base entries. If the answer isn't in the provided context, " +

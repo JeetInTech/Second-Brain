@@ -43,6 +43,30 @@ export default function AskPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("ask-brain-history");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const restored = parsed.map((msg: ChatMessage & { timestamp: string }) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(restored);
+      } catch {
+        console.error("[Chat] Failed to restore history");
+      }
+    }
+  }, []);
+
+  // Save chat history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("ask-brain-history", JSON.stringify(messages));
+    }
+  }, [messages]);
+
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,6 +76,12 @@ export default function AskPage() {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Clear chat history
+  const clearHistory = () => {
+    setMessages([]);
+    localStorage.removeItem("ask-brain-history");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,12 +137,22 @@ export default function AskPage() {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 shrink-0"
+          className="mb-4 shrink-0 flex items-start justify-between"
         >
-          <h1 className="text-2xl font-bold text-foreground">Ask Your Brain</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Ask questions and get answers from your knowledge base.
-          </p>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Ask Your Brain</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Ask questions and get answers from your knowledge base.
+            </p>
+          </div>
+          {messages.length > 0 && (
+            <button
+              onClick={clearHistory}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted cursor-pointer"
+            >
+              Clear history
+            </button>
+          )}
         </motion.div>
 
         {/* Chat Area */}

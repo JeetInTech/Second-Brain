@@ -63,7 +63,28 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: var(--muted-foreground) var(--muted);
+}
+
+/* Webkit scrollbar styling for better visibility */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 10px;
+  border: 2px solid var(--muted);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
 }
 
 html {

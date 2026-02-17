@@ -102,6 +102,24 @@ export default function CapturePage() {
     }
   };
 
+  // Fetch link content when URL is provided for LINK type
+  const fetchLinkContent = async (url: string): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/fetch-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.content || null;
+      }
+    } catch (err) {
+      console.warn("[Capture] Failed to fetch link content:", err);
+    }
+    return null;
+  };
+
   // Form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -109,12 +127,23 @@ export default function CapturePage() {
     setSubmitting(true);
 
     try {
+      // For LINK type, try to fetch webpage content
+      let finalContent = content;
+      if (type === "LINK" && sourceUrl.trim()) {
+        const fetched = await fetchLinkContent(sourceUrl);
+        if (fetched) {
+          finalContent = content.trim()
+            ? `${content}\n\n--- Fetched from URL ---\n${fetched}`
+            : fetched;
+        }
+      }
+
       const response = await fetch("/api/knowledge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          content,
+          content: finalContent,
           type,
           tags,
           sourceUrl: sourceUrl || undefined,

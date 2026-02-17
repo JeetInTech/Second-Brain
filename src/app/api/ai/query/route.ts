@@ -91,8 +91,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("[API] Query endpoint error:", err);
+    
+    // Check if it's a quota/rate limit error
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    if (errorMessage.includes("quota") || errorMessage.includes("RESOURCE_EXHAUSTED")) {
+      return NextResponse.json(
+        { error: "AI quota exceeded. Please try again later or check your API key limits." },
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to process your question." },
+      { error: "Failed to process your question. Please try again." },
       { status: 500 }
     );
   }

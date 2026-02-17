@@ -14,7 +14,7 @@
 import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   FileText,
@@ -54,6 +54,8 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
   const [summarizing, setSummarizing] = useState(false);
   const [tagging, setTagging] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
 
   const fetchItem = useCallback(async () => {
     try {
@@ -72,6 +74,12 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
     fetchItem();
   }, [fetchItem]);
 
+  // Show a toast notification
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 3000);
+  };
+
   // AI: Generate summary
   const handleSummarize = async () => {
     if (!item) return;
@@ -85,9 +93,12 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
       if (res.ok) {
         const data = await res.json();
         setItem((prev) => (prev ? { ...prev, summary: data.summary } : prev));
+        showNotification("Summary generated successfully!");
+      } else {
+        showNotification("Failed to generate summary");
       }
     } catch {
-      // silent fail — not critical
+      showNotification("Failed to generate summary");
     } finally {
       setSummarizing(false);
     }
@@ -106,9 +117,12 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
       if (res.ok) {
         const data = await res.json();
         setItem((prev) => (prev ? { ...prev, tags: data.tags } : prev));
+        showNotification("Tags generated successfully!");
+      } else {
+        showNotification("Failed to generate tags");
       }
     } catch {
-      // silent fail
+      showNotification("Failed to generate tags");
     } finally {
       setTagging(false);
     }
@@ -164,6 +178,20 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
 
   return (
     <AppShell>
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-card border border-border rounded-lg shadow-lg px-4 py-2.5 text-sm font-medium text-foreground"
+          >
+            {notification}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-3xl mx-auto">
         {/* Back navigation */}
         <motion.div
@@ -241,10 +269,28 @@ export default function ItemDetailPage({ params }: ItemDetailPageProps) {
 
           {/* Main Content */}
           <div className="bg-card border border-border rounded-xl p-6">
-            <div className="prose-content text-foreground text-[15px]">
-              {item.content.split("\n").map((paragraph, i) => (
-                <p key={i}>{paragraph}</p>
-              ))}
+            <div className="prose-content text-foreground text-[15px] leading-relaxed space-y-3">
+              {(() => {
+                const shouldTruncate = item.content.length > 400;
+                const displayContent = shouldTruncate && !expanded
+                  ? item.content.slice(0, 400) + "..."
+                  : item.content;
+                return (
+                  <>
+                    {displayContent.split("\n").map((paragraph, i) => (
+                      <p key={i} className="whitespace-pre-wrap">{paragraph}</p>
+                    ))}
+                    {shouldTruncate && (
+                      <button
+                        onClick={() => setExpanded(!expanded)}
+                        className="mt-3 text-sm text-accent hover:underline font-medium transition-colors cursor-pointer"
+                      >
+                        {expanded ? "Show less" : "Show more"}
+                      </button>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 

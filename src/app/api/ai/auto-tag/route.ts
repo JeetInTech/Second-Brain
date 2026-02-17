@@ -46,8 +46,7 @@ export async function POST(request: NextRequest) {
 
     if (aiTags.length === 0) {
       return NextResponse.json(
-        { error: "Could not generate tags for this content." },
-        { status: 500 }
+        { tags: item.tags, newTags: [], itemId, message: "No new tags generated" }
       );
     }
 

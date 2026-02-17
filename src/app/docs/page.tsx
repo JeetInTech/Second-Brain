@@ -152,7 +152,7 @@ export default function DocsPage() {
               <ArchLayer
                 icon={Brain}
                 label="AI Service"
-                items={["Google Gemini (swappable)", "Centralized in lib/ai.ts", "Provider-agnostic interface"]}
+                items={["Google Gemini 2.5 Flash (swappable)", "Centralized in lib/ai.ts", "Provider-agnostic interface"]}
               />
               <ArchLayer
                 icon={Database}
