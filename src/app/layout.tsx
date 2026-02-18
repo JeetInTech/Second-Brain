@@ -14,11 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Second Brain — AI-Powered Knowledge Engine",
+  title: "Second Brain",
   description:
     "Capture, organize, and intelligently surface your knowledge. " +
     "An AI-powered second brain that helps you make sense of everything you learn.",
   keywords: ["knowledge management", "AI", "notes", "second brain"],
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
