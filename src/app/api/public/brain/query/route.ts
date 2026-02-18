@@ -56,12 +56,15 @@ export async function GET(request: NextRequest) {
       .filter((w) => w.length > 3);
 
     const items = await db.knowledgeItem.findMany({
-      where: {
-        OR: keywords.flatMap((keyword) => [
-          { title: { contains: keyword, mode: "insensitive" as const } },
-          { content: { contains: keyword, mode: "insensitive" as const } },
-        ]),
-      },
+      where:
+        keywords.length > 0
+          ? {
+              OR: keywords.flatMap((keyword) => [
+                { title: { contains: keyword, mode: "insensitive" as const } },
+                { content: { contains: keyword, mode: "insensitive" as const } },
+              ]),
+            }
+          : undefined, // no filter — just grab recent items
       take: 8,
       orderBy: { createdAt: "desc" },
     });
@@ -76,10 +79,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response, { headers: corsHeaders });
     }
 
-    const result = await queryKnowledgeBase(
-      question,
-      items.map((i) => ({ id: i.id, title: i.title, content: i.content }))
-    );
+    let result: { answer: string; sourceIds: string[] } | null = null;
+    try {
+      result = await queryKnowledgeBase(
+        question,
+        items.map((i) => ({ id: i.id, title: i.title, content: i.content }))
+      );
+    } catch (err) {
+      console.error("[Public API] AI query failed:", err);
+    }
 
     const response: PublicBrainQueryResponse = {
       question,

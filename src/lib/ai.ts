@@ -145,46 +145,73 @@ export async function queryKnowledgeBase(
   question: string,
   relevantItems: Array<{ title: string; content: string; id: string }>
 ): Promise<{ answer: string; sourceIds: string[] } | null> {
-  if (!isAIConfigured()) return null;
+  if (!isAIConfigured()) {
+    throw new Error("AI is not configured. Add your GOOGLE_GENERATIVE_AI_API_KEY to .env");
+  }
 
   // Build context from relevant items
   const context = relevantItems
     .map((item, i) => `[${i + 1}] "${item.title}"\n${item.content}`)
     .join("\n\n---\n\n");
 
-  try {
-    const { text } = await generateText({
-      model: google("gemini-2.5-flash"),
-      temperature: 0.4,
-      maxOutputTokens: 4096,
-      system:
-        "You are a helpful personal knowledge assistant. Answer the user's question based ONLY " +
-        "on the provided knowledge base entries. If the answer isn't in the provided context, " +
-        "say so honestly. Reference which entries you used by their number [1], [2], etc. " +
-        "Be conversational but precise.",
-      prompt: `My knowledge base contains these entries:\n\n${context}\n\n---\n\nQuestion: ${question}`,
-    });
+  // Retry logic for transient AI failures (rate limits, network glitches)
+  const MAX_RETRIES = 2;
+  let lastError: unknown = null;
 
-    const answer = text?.trim();
-    if (!answer) return null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Exponential backoff: 1s, 2s
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+        console.log(`[AI] Retrying query (attempt ${attempt + 1}/${MAX_RETRIES + 1})...`);
+      }
 
-    // Extract referenced source numbers and map back to IDs
-    const refPattern = /\[(\d+)\]/g;
-    const matches = [...answer.matchAll(refPattern)];
-    const sourceIds = [
-      ...new Set(
-        matches
-          .map((m) => {
-            const idx = parseInt(m[1], 10) - 1;
-            return relevantItems[idx]?.id;
-          })
-          .filter(Boolean) as string[]
-      ),
-    ];
+      const { text } = await generateText({
+        model: google("gemini-2.5-flash"),
+        temperature: 0.4,
+        maxOutputTokens: 4096,
+        system:
+          "You are a helpful personal knowledge assistant. Answer the user's question based ONLY " +
+          "on the provided knowledge base entries. If the answer isn't in the provided context, " +
+          "say so honestly. Reference which entries you used by their number [1], [2], etc. " +
+          "Be conversational but precise.",
+        prompt: `My knowledge base contains these entries:\n\n${context}\n\n---\n\nQuestion: ${question}`,
+      });
 
-    return { answer, sourceIds };
-  } catch (err) {
-    console.error("[AI] Query failed:", err);
-    return null;
+      const answer = text?.trim();
+      if (!answer) {
+        throw new Error("AI returned an empty response");
+      }
+
+      // Extract referenced source numbers and map back to IDs
+      const refPattern = /\[(\d+)\]/g;
+      const matches = [...answer.matchAll(refPattern)];
+      const sourceIds = [
+        ...new Set(
+          matches
+            .map((m) => {
+              const idx = parseInt(m[1], 10) - 1;
+              return relevantItems[idx]?.id;
+            })
+            .filter(Boolean) as string[]
+        ),
+      ];
+
+      return { answer, sourceIds };
+    } catch (err) {
+      lastError = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[AI] Query attempt ${attempt + 1} failed:`, msg);
+
+      // Don't retry on non-transient errors
+      if (msg.includes("not configured") || msg.includes("API key")) {
+        break;
+      }
+    }
   }
+
+  // All retries exhausted — throw so the caller can return a proper error
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(String(lastError) || "AI query failed after retries");
 }

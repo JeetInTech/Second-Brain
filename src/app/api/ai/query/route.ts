@@ -44,13 +44,17 @@ export async function POST(request: NextRequest) {
 
     // Search for potentially relevant items
     // Using OR across title and content for each keyword
+    // Handle empty keywords by fetching recent items as fallback
     const items = await db.knowledgeItem.findMany({
-      where: {
-        OR: keywords.flatMap((keyword) => [
-          { title: { contains: keyword, mode: "insensitive" as const } },
-          { content: { contains: keyword, mode: "insensitive" as const } },
-        ]),
-      },
+      where:
+        keywords.length > 0
+          ? {
+              OR: keywords.flatMap((keyword) => [
+                { title: { contains: keyword, mode: "insensitive" as const } },
+                { content: { contains: keyword, mode: "insensitive" as const } },
+              ]),
+            }
+          : undefined, // no filter — just grab recent items
       take: 10, // cap context window size
       orderBy: { createdAt: "desc" },
     });
@@ -69,13 +73,6 @@ export async function POST(request: NextRequest) {
       question,
       items.map((i) => ({ id: i.id, title: i.title, content: i.content }))
     );
-
-    if (!result) {
-      return NextResponse.json(
-        { error: "AI query failed. Please try again." },
-        { status: 500 }
-      );
-    }
 
     // Map source IDs back to item metadata
     const sources = result.sourceIds
@@ -100,9 +97,16 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
+
+    if (errorMessage.includes("not configured") || errorMessage.includes("API key")) {
+      return NextResponse.json(
+        { error: "AI is not configured. Please set up your API key." },
+        { status: 503 }
+      );
+    }
     
     return NextResponse.json(
-      { error: "Failed to process your question. Please try again." },
+      { error: `AI query failed: ${errorMessage}. Please try again.` },
       { status: 500 }
     );
   }

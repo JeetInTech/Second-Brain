@@ -23,6 +23,7 @@ import {
   ArrowUpRight,
   MessageCircle,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import AppShell from "@/components/layout/AppShell";
 import Button from "@/components/ui/Button";
@@ -33,6 +34,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   sources?: Array<{ id: string; title: string }>;
+  isError?: boolean;
   timestamp: Date;
 }
 
@@ -108,19 +110,32 @@ export default function AskPage() {
 
       const data = await res.json();
 
-      const assistantMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        role: "assistant",
-        content: data.answer || data.error || "I couldn't process that question.",
-        sources: data.sources || [],
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+      if (!res.ok) {
+        // Server returned an error — show it clearly as an error
+        const assistantMsg: ChatMessage = {
+          id: `err-${Date.now()}`,
+          role: "assistant",
+          content: data.error || `Request failed (${res.status}). Please try again.`,
+          isError: true,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        const assistantMsg: ChatMessage = {
+          id: `ai-${Date.now()}`,
+          role: "assistant",
+          content: data.answer || "I couldn't process that question.",
+          sources: data.sources || [],
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMsg]);
+      }
     } catch {
       const errorMsg: ChatMessage = {
         id: `err-${Date.now()}`,
         role: "assistant",
         content: "Something went wrong. Check your connection and try again.",
+        isError: true,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -205,8 +220,15 @@ export default function AskPage() {
                     )}
                   >
                     {msg.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-lg bg-accent-light flex items-center justify-center shrink-0 mt-0.5">
-                        <Brain className="w-3.5 h-3.5 text-accent" />
+                      <div className={cn(
+                        "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                        msg.isError ? "bg-red-100" : "bg-accent-light"
+                      )}>
+                        {msg.isError ? (
+                          <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                        ) : (
+                          <Brain className="w-3.5 h-3.5 text-accent" />
+                        )}
                       </div>
                     )}
 
@@ -215,7 +237,9 @@ export default function AskPage() {
                         "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                         msg.role === "user"
                           ? "bg-accent text-white rounded-br-md"
-                          : "bg-muted text-foreground rounded-bl-md"
+                          : msg.isError
+                            ? "bg-red-50 text-red-700 border border-red-200 rounded-bl-md"
+                            : "bg-muted text-foreground rounded-bl-md"
                       )}
                     >
                       <p className="whitespace-pre-wrap">{msg.content}</p>
